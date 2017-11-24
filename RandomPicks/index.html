@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+	  <meta charset="utf-8">
+	  <meta name="viewport" content="width=device-width">
+	  <title>Random Picks</title>
+	  <style>
+		* {
+		  font-family: Verdana, sans-serif;
+		}
+		textarea{
+		  display: block;
+		  width: 600px;
+		  height: 300px;
+		}
+	  </style>
+</head>
+<body>
+	<h1>Random Picks</h1>
+	<div>Input:</div>
+	<textarea id="input"></textarea>
+	<div><button id="pick">Pick Items</button></div>
+	<div>Output:</div>
+	<textarea id="output"></textarea>
+	
+	
+	<script>
+	let input = document.querySelector('#input');
+	let output = document.querySelector('#output');
+	let pick = document.querySelector('#pick');
+	
+	function chance(odds){
+		return Math.random()*100 < odds*1;
+	}
+	
+	pick.addEventListener('click', ()=>{
+		output.value = input.value.split('\n').map(it=>{
+			let groups = /^(\d+) (.+)$/.exec(it)
+			if (groups != null && chance(groups[1])) return groups[2];
+			return false;
+		}).filter(it=>it).join('\n');
+	});
+	
+	input.value = "One item per line.\n";
+	input.value += "Probability followed by a space and the text.\n";
+	input.value += "Lines that are not formatted like this will be ignored.\n\n";
+	input.value += "Example:\n";
+	input.value += "5 This line has a 5% chance of getting picked.\n";
+	input.value += "10 This line has a 10% chance.\n";
+	input.value += "8 This line has an 8% chance.\n";
+	input.value += "50 This line has a 50% chance.\n";
+	input.value += "100 This line will always be picked!\n...";
+	</script>
+</body>
+</html>
