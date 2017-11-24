@@ -8,48 +8,121 @@
 		* {
 		  font-family: Verdana, sans-serif;
 		}
-		textarea{
+		textarea {
 		  display: block;
-		  width: 600px;
+		  width: 700px;
 		  height: 300px;
+		  white-space: nowrap;
+		}
+		input {
+			margin-left: 1em;
+		}
+		
+		.container {
+			display: flex;
+		}
+		aside {
+			margin-left: 2em;
 		}
 	  </style>
 </head>
 <body>
 	<h1>Random Picks</h1>
-	<div>Input:</div>
-	<textarea id="input"></textarea>
-	<div><button id="pick">Pick Items</button></div>
-	<div>Output:</div>
-	<textarea id="output"></textarea>
+	<div class="container">
+		<article>
+			<div>Input:</div>
+			<textarea id="input"></textarea>
+			<div><button id="pick">Pick Items</button></div>
+			<div>Output:</div>
+			<textarea id="output"></textarea>
+		</article>
+		
+		<aside>
+			<div>Variables <button id="variables-remove">remove unused</button></div>
+			<table id="variables"><tbody></tbody></table>
+		</aside>
+	</div>
 	
 	
 	<script>
 	let input = document.querySelector('#input');
 	let output = document.querySelector('#output');
 	let pick = document.querySelector('#pick');
+	let variables = document.querySelector('#variables');
+	let variablesRemove = document.querySelector('#variables-remove');
+	
+	let vars = {};
 	
 	function chance(odds){
 		return Math.random()*100 < odds*1;
 	}
 	
+	function getVariables() {
+		let reg = /\{\{(.+?)\}\}/g
+		let m;
+		do {
+			m = reg.exec(input.value);
+			if (m && vars[m[1]] == undefined) {
+				let tr = document.createElement('tr'); {
+					vars[m[1]] = tr;
+					variables.appendChild(tr);
+					let name = document.createElement('td'); {
+						name.textContent = m[1];
+						tr.appendChild(name);
+					}
+					let inpTd = document.createElement('td'); {
+						tr.appendChild(inpTd);
+						let inp = document.createElement('input'); {
+							inp.setAttribute('data-var', m[1]);
+							tr.input = inp;
+							inpTd.appendChild(inp);
+						}
+					}
+				}
+			}
+		} while (m)
+		
+		Object.keys(vars).sort().forEach(it=>variables.appendChild(vars[it]));
+	}
+	
+	variablesRemove.addEventListener('click', ()=>{
+		Object.keys(vars).forEach(it=>{
+			if (input.value.search('{{' + it + '}}') == -1) {
+				vars[it].remove();
+				delete vars[it];
+			}
+		});
+	});
+	input.addEventListener('change', getVariables);
+	
 	pick.addEventListener('click', ()=>{
 		output.value = input.value.split('\n').map(it=>{
 			let groups = /^(\d+) (.+)$/.exec(it)
-			if (groups != null && chance(groups[1])) return groups[2];
+			if (groups != null && chance(groups[1])) {
+				let line = groups[2];
+				Object.keys(vars).forEach(it=>{
+					line = line.replace('{{' + it + '}}', vars[it].input.value);
+				});
+				return line;
+			}
 			return false;
 		}).filter(it=>it).join('\n');
 	});
 	
 	input.value = "One item per line.\n";
 	input.value += "Probability followed by a space and the text.\n";
-	input.value += "Lines that are not formatted like this will be ignored.\n\n";
+	input.value += "Lines that are not formatted like this will be ignored.\n";
+	input.value += "Use variables by surrounding words with double curly brackets.\n\n";
 	input.value += "Example:\n";
 	input.value += "5 This line has a 5% chance of getting picked.\n";
 	input.value += "10 This line has a 10% chance.\n";
 	input.value += "8 This line has an 8% chance.\n";
 	input.value += "50 This line has a 50% chance.\n";
-	input.value += "100 This line will always be picked!\n...";
+	input.value += "100 This line will always be picked! And it has a variable called \"name\" with the value {{name}}.\n...";
+	
+	getVariables();
+	
+	vars.name.input.value = 'John Doe';
 	</script>
 </body>
 </html>
