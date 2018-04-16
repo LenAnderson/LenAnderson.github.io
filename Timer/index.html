@@ -33,7 +33,6 @@
 		}
 		
 		svg {
-			cursor: pointer;
 			left: 0;
 			position: absolute;
 			top: 0;
@@ -43,10 +42,13 @@
 		}
 		.label {
 			color: rgb(20, 116, 239);
+			cursor: pointer;
 			font-size: 100px;
 			line-height: 200px;
 			padding: 0 10px;
+			position: relative;
 			text-align: center;
+			z-index: 1;
 		}
 		.label > .inner {
 			display: inline-block;
@@ -133,7 +135,7 @@
 		let duration = 10;
 		function startTimer() {
 			if (stopped) {
-				document.querySelector('.startStop').textContent = 'Stop';
+				document.querySelector('.startStop').textContent = 'Reset';
 				duration = getDuration();
 				timeCompleted = new Date();
 				
@@ -151,22 +153,24 @@
 					requestAnimationFrame(tick);
 				}, 1);
 			} else {
-				document.querySelector('.startStop').textContent = 'Start';
 				stopTimer();
 			}
 		}
 		
 		function stopTimer() {
 			stopped = true;
+			document.querySelector('.startStop').textContent = 'Start';
 			timer.style.transition = 'none';
 			timer.style.strokeDashoffset = 0;
-			change();
+			setLabel(getDuration() * 1000);
 		}
 		
 		function tick() {
 			if (stopped) return;
 			let dur = timeCompleted - new Date().getTime();
-			if (dur < 0) dur = 0;
+			if (dur <= 0) {
+				dur = 0;
+			}
 			setLabel(dur);
 			if (dur > 0) requestAnimationFrame(tick);
 		}
@@ -222,7 +226,7 @@
 		document.querySelector('#hours').addEventListener('change', change);
 		document.querySelector('#minutes').addEventListener('change', change);
 		document.querySelector('#seconds').addEventListener('change', change);
-		document.querySelector('svg').addEventListener('click', toggleInput);
+		document.querySelector('.label').addEventListener('click', toggleInput);
 		
 		change();
 	</script>
