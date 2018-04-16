@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+	  <meta charset="utf-8">
+	  <meta name="viewport" content="width=device-width">
+	  <title>Timer</title>
+	  <style>
+		* {
+		  font-family: Helvetica, Verdana, sans-serif;
+		}
+		
+		.container {
+			bottom: 0;
+			left: 0;
+			position: absolute;
+			right: 0;
+			text-align: center;
+			top: 0;
+		}
+		
+		.height {
+			display: inline-block;
+			height: 100%;
+			vertical-align: middle;
+			width: 0;
+		}
+		
+		.timer {
+			display: inline-block;
+			position: relative;
+			vertical-align: middle;
+			width: 200px;
+		}
+		
+		svg {
+			cursor: pointer;
+			left: 0;
+			position: absolute;
+			top: 0;
+		}
+		path {
+			fill: none;
+		}
+		.label {
+			color: rgb(20, 116, 239);
+			font-size: 100px;
+			line-height: 200px;
+			padding: 0 10px;
+			text-align: center;
+		}
+		.label > .inner {
+			display: inline-block;
+			transform-origin: left center;
+		}
+		
+		.startStop {
+			background: white;
+			border: 2px solid rgb(20, 116, 239);
+			border-radius: 15px;
+			color: rgb(20, 116, 239);
+			cursor: pointer;
+			font-size: 50px;
+			margin: 10px 0;
+			opacity: 0.5;
+			width: 150px;
+		}
+		.startStop:hover {
+			opacity: 1;
+		}
+		
+		.duration-container {
+			margin-left: -123px;
+			margin-right: -123px;
+			overflow: hidden;
+			white-space: nowrap;
+		}
+		.duration-container, .duration {
+			color: rgb(20, 116, 239);
+			font-size: 100px;
+		}
+		.duration {
+			text-align: right;
+		}
+		.hidden { visibility: hidden; }
+	  </style>
+</head>
+<body>
+	<div class="container">
+		<div class="height"></div>
+		<div class="timer">
+			<svg width="200" height="200">
+				<defs>
+					<linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+						<stop offset="0" stop-color="rgb(85, 208, 154)" />
+						<stop offset="0.5" stop-color="rgb(27, 51, 173)" />
+						<stop offset="1" stop-color="rgb(226, 45, 98)" />
+					</linearGradient>
+				</defs>
+				<g fill="none">
+					<path id="path" stroke="rgb(200,200,200)" stroke-width="5"  d="
+							M 100, 100
+							m 0, -95
+							a 95,95 0 1,0 0,190
+							a 95,95 0 1,0 0,-190
+							"
+						/>
+					<path id="timer" stroke="url(#gradient)" stroke-width="5"  d="
+							M 100, 100
+							m 0, -95
+							a 95,95 0 1,0 0,190
+							a 95,95 0 1,0 0,-190
+							"
+						/>
+				</g>
+			</svg>
+			
+			<div class="label">
+				<span class="inner"></span>
+			</div>
+			<div class="controls">
+				<button class="startStop">Start</button>
+			</div>
+			<div class="duration-container hidden">
+				<input id="hours" class="duration" type="number" max="59" min="0" value="0">:<input id="minutes" class="duration" type="number" max="59" min="0" value="0">:<input id="seconds" class="duration" type="number" max="59" min="0" value="10">
+			</div>
+		</div>
+	</div>
+	
+	
+	<script>
+		let timeCompleted;
+		let stopped = true;
+		let duration = 10;
+		function startTimer() {
+			if (stopped) {
+				document.querySelector('.startStop').textContent = 'Stop';
+				duration = getDuration();
+				timeCompleted = new Date();
+				
+				let timer = document.querySelector('#timer');
+				timer.style.transition = 'none';
+				timer.style.strokeDashoffset = 0;
+				setTimeout(()=>{
+					let length = timer.getTotalLength();
+					timer.style.strokeDasharray = length + ' ' + length;
+					timer.style.transition = 'stroke-dashoffset ' + duration + 's linear';
+					timer.style.strokeDashoffset = -length;
+					
+					timeCompleted = new Date().getTime() + duration * 1000;
+					stopped = false;
+					requestAnimationFrame(tick);
+				}, 1);
+			} else {
+				document.querySelector('.startStop').textContent = 'Start';
+				stopTimer();
+			}
+		}
+		
+		function stopTimer() {
+			stopped = true;
+			timer.style.transition = 'none';
+			timer.style.strokeDashoffset = 0;
+			change();
+		}
+		
+		function tick() {
+			if (stopped) return;
+			let dur = timeCompleted - new Date().getTime();
+			if (dur < 0) dur = 0;
+			setLabel(dur);
+			if (dur > 0) requestAnimationFrame(tick);
+		}
+		
+		function formatDuration(millis) {
+			if (millis < 0) return '0';
+			let secs = Math.round(millis / 1000);
+			let seconds = secs % 60;
+			let minutes = Math.floor((secs / 60) % 60);
+			let hours =   Math.floor((secs / 60 / 60) % 60);
+			
+			let str = '';
+			if (hours > 0) str += hours + ':';
+			if (hours > 0 && minutes < 10) str += '0';
+			if (hours > 0 || minutes > 0) str += minutes + ':';
+			if ((hours > 0 || minutes > 0) && seconds < 10) str += '0';
+			str += seconds;
+			
+			return str;
+		}
+		
+		function setLabel(dur) {
+			let label = document.querySelector('.label > .inner');
+			label.textContent = formatDuration(dur);
+			label.style.transform = '';
+			let width = label.getBoundingClientRect().width;
+			if (width > 180) {
+				label.style.transform = 'scale(' + (180 / width) + ')';
+			}
+		}
+		
+		function change() {
+			if (stopped) {
+				setLabel(getDuration() * 1000);
+			}
+		}
+		
+		function getDuration() {
+			let dur = document.querySelector('#seconds').value * 1;
+			dur += document.querySelector('#minutes').value * 60;
+			dur += document.querySelector('#hours').value * 60 * 60;
+			return dur;
+		}
+		
+		function toggleInput() {
+			document.querySelector('.duration-container').classList.toggle('hidden');
+		}
+		
+		
+		
+		
+		document.querySelector('.startStop').addEventListener('click', startTimer);
+		document.querySelector('#hours').addEventListener('change', change);
+		document.querySelector('#minutes').addEventListener('change', change);
+		document.querySelector('#seconds').addEventListener('change', change);
+		document.querySelector('svg').addEventListener('click', toggleInput);
+		
+		change();
+	</script>
+</body>
+</html>
