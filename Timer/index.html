@@ -48,6 +48,20 @@
 				color: rgb(255,255,255);
 			}
 		}
+		.paused svg path#timer {
+			animation-name: paused;
+			animation-duration: 1s;
+			animation-iteration-count: infinite;
+			animation-direction: alternate;
+		}
+		@keyframes paused {
+			from {
+				opacity: 1;
+			}
+			to {
+				opacity: 0;
+			}
+		}
 		
 		svg {
 			left: 0;
@@ -71,17 +85,31 @@
 			display: inline-block;
 			transform-origin: left center;
 		}
+		.labelSub {
+			height: 0px;
+			margin: 0 30px;
+			width: 140px;
+		}
+		.labelSub > .inner {
+			color: rgb(20, 116, 239);
+			display: inline-block;
+			font-size: 25px;
+			position: relative;
+			top: -65px;
+			transform-origin: left center;
+			white-space: nowrap;
+		}
 		
-		.startStop {
+		button {
 			background: white;
 			border: 2px solid rgb(20, 116, 239);
 			border-radius: 15px;
 			color: rgb(20, 116, 239);
 			cursor: pointer;
 			font-size: 50px;
-			margin: 10px 0;
+			margin: 10px;
 			opacity: 0.5;
-			width: 150px;
+			width: 200px;
 		}
 		.startStop:hover {
 			opacity: 1;
@@ -99,6 +127,11 @@
 		}
 		.duration {
 			text-align: right;
+		}
+		.controls {
+			margin-left: -123px;
+			margin-right: -123px;
+			text-align: center;
 		}
 		.hidden { visibility: hidden; }
 	  </style>
@@ -136,8 +169,12 @@
 			<div class="label">
 				<span class="inner"></span>
 			</div>
+			<div class="labelSub">
+				<span class="inner"></span>
+			</div>
 			<div class="controls">
 				<button class="startStop">Start</button>
+				<button class="pause hidden">Pause</button>
 			</div>
 			<div class="duration-container hidden">
 				<input id="hours" class="duration" type="number" max="59" min="0" value="0">:<input id="minutes" class="duration" type="number" max="59" min="0" value="0">:<input id="seconds" class="duration" type="number" max="59" min="0" value="10">
@@ -147,25 +184,41 @@
 	
 	
 	<script>
+		let dom = {
+			start: document.querySelector('.startStop'),
+			pause: document.querySelector('.pause'),
+			timer: document.querySelector('#timer'),
+			container: document.querySelector('.container'),
+			label: document.querySelector('.label > .inner'),
+			labelSub: document.querySelector('.labelSub > .inner'),
+			seconds: document.querySelector('#seconds'),
+			minutes: document.querySelector('#minutes'),
+			hours: document.querySelector('#hours'),
+			duration: document.querySelector('.duration-container')
+		}
+		let timeStarted;
 		let timeCompleted;
+		let timeLeft;
 		let stopped = true;
+		let paused = false;
 		let duration = 10;
 		function startTimer() {
 			if (stopped) {
-				document.querySelector('.startStop').textContent = 'Reset';
+				setLabelSub('');
+				dom.start.textContent = 'Reset';
+				dom.pause.classList.remove('hidden');
 				duration = getDuration();
-				timeCompleted = new Date();
 				
-				let timer = document.querySelector('#timer');
-				timer.style.transition = 'none';
-				timer.style.strokeDashoffset = 0;
+				dom.timer.style.transition = 'none';
+				dom.timer.style.strokeDashoffset = 0;
 				setTimeout(()=>{
-					let length = timer.getTotalLength();
-					timer.style.strokeDasharray = length + ' ' + length;
-					timer.style.transition = 'stroke-dashoffset ' + duration + 's linear';
-					timer.style.strokeDashoffset = -length;
+					let length = dom.timer.getTotalLength();
+					dom.timer.style.strokeDasharray = length + ' ' + length;
+					dom.timer.style.transition = 'stroke-dashoffset ' + duration + 's linear';
+					dom.timer.style.strokeDashoffset = -length;
 					
-					timeCompleted = new Date().getTime() + duration * 1000;
+					timeStarted = new Date().getTime();
+					timeCompleted = timeStarted + duration * 1000;
 					stopped = false;
 					requestAnimationFrame(tick);
 				}, 1);
@@ -174,21 +227,47 @@
 			}
 		}
 		
+		function pauseTimer() {
+			if (paused) {
+				paused = false;
+				dom.pause.textContent = 'Pause';
+				timeCompleted = new Date().getTime() + timeLeft;
+				dom.container.classList.remove('paused');
+				timer.style.transition = 'stroke-dashoffset ' + timeLeft + 'ms linear';
+				let length = timer.getTotalLength();
+				timer.style.strokeDashoffset = -length;
+				requestAnimationFrame(tick);
+			} else {
+				paused = true;
+				dom.pause.textContent = 'Resume';
+				dom.container.classList.add('paused');
+				timeLeft = timeCompleted - new Date().getTime();
+				let prog = 1 - (timeLeft / duration / 1000);
+				let length = timer.getTotalLength();
+				dom.timer.style.transition = 'none';
+				dom.timer.style.strokeDashoffset = -length * prog;
+			}
+		}
+		
 		function stopTimer() {
 			stopped = true;
-			document.querySelector('.container').classList.remove('stop');
-			document.querySelector('.startStop').textContent = 'Start';
+			paused = false;
+			setLabelSub('');
+			dom.container.classList.remove('stop', 'paused');
+			dom.pause.classList.add('hidden');
+			dom.start.textContent = 'Start';
 			timer.style.transition = 'none';
 			timer.style.strokeDashoffset = 0;
 			setLabel(getDuration() * 1000);
 		}
 		
 		function tick() {
-			if (stopped) return;
+			if (stopped || paused) return;
 			let dur = timeCompleted - new Date().getTime();
 			if (dur <= 0) {
 				dur = 0;
-				document.querySelector('.container').classList.add('stop');
+				dom.container.classList.add('stop');
+				setLabelSub('Do not start.');
 			}
 			setLabel(dur);
 			if (dur > 0) requestAnimationFrame(tick);
@@ -212,12 +291,23 @@
 		}
 		
 		function setLabel(dur) {
-			let label = document.querySelector('.label > .inner');
-			label.textContent = formatDuration(dur);
-			label.style.transform = '';
-			let width = label.getBoundingClientRect().width;
+			dom.label.textContent = formatDuration(dur);
+			dom.label.style.transform = '';
+			let width = dom.label.getBoundingClientRect().width;
 			if (width > 180) {
-				label.style.transform = 'scale(' + (180 / width) + ')';
+				dom.label.style.transform = 'scale(' + (180 / width) + ')';
+			} else {
+				dom.label.style.transform = '';
+			}
+		}
+		function setLabelSub(txt) {
+			dom.labelSub.textContent = txt;
+			dom.labelSub.style.transform = '';
+			let width = dom.labelSub.getBoundingClientRect().width;
+			if (width > 140) {
+				dom.labelSub.style.transform = 'scale(' + (140 / width) + ')';
+			} else {
+				dom.labelSub.style.transform = '';
 			}
 		}
 		
@@ -228,24 +318,25 @@
 		}
 		
 		function getDuration() {
-			let dur = document.querySelector('#seconds').value * 1;
-			dur += document.querySelector('#minutes').value * 60;
-			dur += document.querySelector('#hours').value * 60 * 60;
+			let dur = dom.seconds.value * 1;
+			dur += dom.minutes.value * 60;
+			dur += dom.hours.value * 60 * 60;
 			return dur;
 		}
 		
 		function toggleInput() {
-			document.querySelector('.duration-container').classList.toggle('hidden');
+			dom.duration.classList.toggle('hidden');
 		}
 		
 		
 		
 		
-		document.querySelector('.startStop').addEventListener('click', startTimer);
-		document.querySelector('#hours').addEventListener('change', change);
-		document.querySelector('#minutes').addEventListener('change', change);
-		document.querySelector('#seconds').addEventListener('change', change);
-		document.querySelector('.label').addEventListener('click', toggleInput);
+		dom.start.addEventListener('click', startTimer);
+		dom.pause.addEventListener('click', pauseTimer);
+		dom.hours.addEventListener('change', change);
+		dom.minutes.addEventListener('change', change);
+		dom.seconds.addEventListener('change', change);
+		dom.label.addEventListener('click', toggleInput);
 		
 		change();
 	</script>
