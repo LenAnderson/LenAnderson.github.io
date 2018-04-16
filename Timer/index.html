@@ -32,6 +32,23 @@
 			width: 200px;
 		}
 		
+		.stop svg path#path, .stop .label {
+			animation-name: stop;
+			animation-duration: 500ms;
+			animation-iteration-count: infinite;
+			animation-direction: alternate;
+		}
+		@keyframes stop {
+			from {
+				stroke: rgb(200,200,200);
+				color: rgb(20, 116, 239);
+			}
+			to {
+				stroke: rgb(20, 116, 239);
+				color: rgb(255,255,255);
+			}
+		}
+		
 		svg {
 			left: 0;
 			position: absolute;
@@ -159,6 +176,7 @@
 		
 		function stopTimer() {
 			stopped = true;
+			document.querySelector('.container').classList.remove('stop');
 			document.querySelector('.startStop').textContent = 'Start';
 			timer.style.transition = 'none';
 			timer.style.strokeDashoffset = 0;
@@ -170,13 +188,14 @@
 			let dur = timeCompleted - new Date().getTime();
 			if (dur <= 0) {
 				dur = 0;
+				document.querySelector('.container').classList.add('stop');
 			}
 			setLabel(dur);
 			if (dur > 0) requestAnimationFrame(tick);
 		}
 		
 		function formatDuration(millis) {
-			if (millis < 0) return '0';
+			if (millis <= 0) return 'STOP';
 			let secs = Math.round(millis / 1000);
 			let seconds = secs % 60;
 			let minutes = Math.floor((secs / 60) % 60);
