@@ -147,16 +147,20 @@
 		const updatePreview = ()=>{
 			const w = image.naturalWidth
 			const h = image.naturalHeight;
+			const tw = w / config.cols;
+			const th = (h - config.offsetTop - config.offsetBottom) / config.rows;
 			let fact = 1;
 			if (window.innerWidth / window.innerHeight > w/h) {
 				fact = window.innerHeight / h;
 			} else {
 				fact = window.innerWidth / w;
 			}
-			dom.config.preview.style.top = `${config.offsetTop*fact}px`;
-			dom.config.preview.style.left = `${(window.innerWidth - w*fact) / 2}px`;
-			dom.config.preview.style.height = `${(h - config.offsetTop - config.offsetBottom)*fact / config.rows}px`;
-			dom.config.preview.style.width = `${w*fact / config.cols}px`;
+			const row = Math.floor(index / config.cols);
+			const col = index % config.cols;
+			dom.config.preview.style.left = `${(window.innerWidth - w*fact) / 2 + (col * tw) * fact}px`;
+			dom.config.preview.style.top = `${(window.innerHeight - h*fact) / 2 + (row * th + config.offsetTop) * fact}px`;
+			dom.config.preview.style.width = `${tw*fact}px`;
+			dom.config.preview.style.height = `${th*fact}px`;
 			localStorage.setItem('csv--config', JSON.stringify(config));
 			updateViewer();
 		};
@@ -194,22 +198,22 @@
 			switch (evt.key) {
 				case 'ArrowDown': {
 					index = Math.min((index + config.cols), (config.rows * config.cols)-1);
-					updateViewer();
+					updatePreview();
 					break;
 				}
 				case 'ArrowRight': {
 					index = Math.min((index + 1), (config.rows * config.cols)-1);
-					updateViewer();
+					updatePreview();
 					break;
 				}
 				case 'ArrowUp': {
 					index = Math.max((index - config.cols), 0);
-					updateViewer();
+					updatePreview();
 					break;
 				}
 				case 'ArrowLeft': {
 					index = Math.max((index - 1), 0);
-					updateViewer();
+					updatePreview();
 					break;
 				}
 				default: {
