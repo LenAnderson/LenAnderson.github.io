@@ -180,7 +180,7 @@
 			const row = Math.floor(index / config.cols);
 			const col = index % config.cols;
 			console.log('INDEX', index, row, col);
-			dom.viewer.image.style.backgroundPosition = `-${col*tw*fact}px -${row*th*fact}px`;
+			dom.viewer.image.style.backgroundPosition = `-${(col*tw + offsetTop)*fact}px -${row*th*fact}px`;
 			dom.viewer.image.style.backgroundSize = `${w*fact}px ${h*fact}px`;
 		};
 
