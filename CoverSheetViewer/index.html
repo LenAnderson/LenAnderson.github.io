@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Contact Sheet Viewer</title>
+	<style>
+		html, body {
+			background-color: rgb(80 80 80);
+			color: rgb(220 220 220);
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			margin: 0;
+			overflow: hidden;
+			padding: 0;
+		}
+
+		.app {
+			height: 100vh;
+			overflow: hidden;
+			width: 100vw;
+		}
+
+		.config-trigger {
+			background-color: rgb(100 100 100);
+			cursor: pointer;
+			font-size: 2em;
+			left: 5px;
+			position: absolute;
+			top: 5px;
+			z-index: 3;
+		}
+
+		.config {
+			background-color: rgb(80 80 80);
+			background-repeat: no-repeat;
+			background-position: center;
+			background-size: contain;
+			display: none;
+			height: 100vh;
+			left: 0;
+			position: relative;
+			top: 0;
+			width: 100vw;
+			z-index: 2;
+		}
+		.config.active {
+			display: block;
+		}
+		.config > .controls {
+			background-color: rgb(100 100 100);
+			left: 5px;
+			opacity: 0.25;
+			padding: 1em 1em 1em 3.5em;
+			position: absolute;
+			top: 5px;
+		}
+		.config > .controls:hover {
+			opacity: 1;
+		}
+		.config > .controls > label {
+			display: block;
+		}
+		.config > .controls > label > input {
+			text-align: right;
+		}
+		.config > .preview {
+			position: absolute;
+			outline: 2px solid red;
+		}
+
+		.viewer {
+			height: 100vh;
+			left: 0;
+			position: absolute;
+			top: 0;
+			width: 100vw;
+			z-index: 1;
+		}
+		.viewer > .image {
+			background-repeat: no-repeat;
+			position: absolute;
+		}
+	</style>
+</head>
+<body>
+	<div class="app">
+		<div class="config-trigger">🔧</div>
+		<div class="config">
+			<div class="controls">
+				<label>
+					Columns:<br>
+					<input type="number" id="cols">
+				</label>
+				<label>
+					Rows:<br>
+					<input type="number" id="rows">
+				</label>
+				<label>
+					Offset Top:<br>
+					<input type="number" id="offsetTop">
+				</label>
+				<label>
+					Offset Bottom:<br>
+					<input type="number" id="offsetBottom">
+				</label>
+			</div>
+			<div class="preview"></div>
+		</div>
+		<div class="viewer">
+			<div class="image"></div>
+		</div>
+	</div>
+
+	<script>
+		const dom = {
+			config: {
+				trigger: document.querySelector('.app > .config-trigger'),
+				root: document.querySelector('.app > .config'),
+				preview: document.querySelector('.app > .config > .preview'),
+				rows: document.querySelector('#rows'),
+				cols: document.querySelector('#cols'),
+				offsetTop: document.querySelector('#offsetTop'),
+				offsetBottom: document.querySelector('#offsetBottom'),
+			},
+			viewer: {
+				root: document.querySelector('.app > .viewer'),
+				image: document.querySelector('.app > .viewer > .image'),
+			}
+		};
+
+		let config = JSON.parse(localStorage.getItem('csv--config') || 'false') || {
+			rows: 10,
+			cols: 6,
+			offsetTop: 150,
+			offsetBottom: 0,
+		};
+		dom.config.rows.value = config.rows;
+		dom.config.cols.value = config.cols;
+		dom.config.offsetTop.value = config.offsetTop;
+		dom.config.offsetBottom.value = config.offsetBottom;
+
+		/**@type {Image}*/
+		let image;
+		let index = 0;
+
+		const updatePreview = ()=>{
+			const w = image.naturalWidth
+			const h = image.naturalHeight;
+			let fact = 1;
+			if (window.innerWidth / window.innerHeight > w/h) {
+				fact = window.innerHeight / h;
+			} else {
+				fact = window.innerWidth / w;
+			}
+			dom.config.preview.style.top = `${config.offsetTop*fact}px`;
+			dom.config.preview.style.left = `${(window.innerWidth - w*fact) / 2}px`;
+			dom.config.preview.style.height = `${(h - config.offsetTop - config.offsetBottom)*fact / config.rows}px`;
+			dom.config.preview.style.width = `${w*fact / config.cols}px`;
+			localStorage.setItem('csv--config', JSON.stringify(config));
+			updateViewer();
+		};
+
+		updateViewer = ()=>{
+			const w = image.naturalWidth
+			const h = image.naturalHeight;
+			const tw = w / config.cols;
+			const th = (h - config.offsetTop - config.offsetBottom) / config.rows;
+			let fact = 1;
+			if (window.innerWidth / window.innerHeight > tw/th) {
+				fact = window.innerHeight / th;
+			} else {
+				fact = window.innerWidth / tw;
+			}
+			dom.viewer.image.style.top = `${(window.innerHeight - th*fact) / 2}px`;
+			dom.viewer.image.style.left = `${(window.innerWidth - tw*fact) / 2}px`;
+			dom.viewer.image.style.width = `${tw*fact}px`;
+			dom.viewer.image.style.height = `${th*fact}px`;
+
+			const row = Math.floor(index / config.cols);
+			const col = index % config.cols;
+			console.log('INDEX', index, row, col);
+			dom.viewer.image.style.backgroundPosition = `-${col*tw*fact}px -${row*th*fact}px`;
+			dom.viewer.image.style.backgroundSize = `${config.cols * tw*fact}px ${config.rows * tw*fact}px`;
+		};
+
+		dom.config.trigger.addEventListener('click', ()=>{
+			dom.config.root.classList.toggle('active');
+		});
+		addEventListener('resize', ()=>{
+			updatePreview();
+		});
+		addEventListener('keyup', evt=>{
+			switch (evt.key) {
+				case 'ArrowDown': {
+					index = Math.min((index + config.cols), (config.rows * config.cols)-1);
+					updateViewer();
+					break;
+				}
+				case 'ArrowRight': {
+					index = Math.min((index + 1), (config.rows * config.cols)-1);
+					updateViewer();
+					break;
+				}
+				case 'ArrowUp': {
+					index = Math.max((index - config.cols), 0);
+					updateViewer();
+					break;
+				}
+				case 'ArrowLeft': {
+					index = Math.max((index - 1), 0);
+					updateViewer();
+					break;
+				}
+				default: {
+					console.log('KEY', evt.key);
+					break;
+				}
+			}
+		});
+		addEventListener('paste', evt=>{
+			const item = Array.from(evt.clipboardData.items).find(it=>/^image\//.test(it.type));
+			if (item) {
+				const blob = item.getAsFile();
+				image = new Image();
+				image.addEventListener('load', ()=>{
+					dom.config.root.style.backgroundImage = `url(${image.src})`;
+					dom.viewer.image.style.backgroundImage = `url(${image.src})`;
+					updatePreview();
+				});
+				image.src = URL.createObjectURL(blob);
+			}
+		});
+		dom.config.rows.addEventListener('change', ()=>{
+			config.rows = parseInt(dom.config.rows.value);
+			updatePreview();
+		});
+		dom.config.cols.addEventListener('change', ()=>{
+			config.cols = parseInt(dom.config.cols.value);
+			updatePreview();
+		});
+		dom.config.offsetTop.addEventListener('change', ()=>{
+			config.offsetTop = parseInt(dom.config.offsetTop.value);
+			updatePreview();
+		});
+		dom.config.offsetBottom.addEventListener('change', ()=>{
+			config.offsetBottom = parseInt(dom.config.offsetBottom.value);
+			updatePreview();
+		});
+	</script>
+</body>
+</html>
